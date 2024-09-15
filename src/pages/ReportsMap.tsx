@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { Sheet, SheetTrigger, SheetContent } from "../components/ui/sheet";
 import {
 	Select,
@@ -12,9 +12,23 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import axios from "axios";
 
 // Albania coordinates (approximately center)
 const albaniaCenter = [41.3275, 19.8189];
+
+// Custom marker icon (optional)
+const markerIcon = new L.Icon({
+	iconUrl:
+		"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+	shadowUrl:
+		"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+	iconSize: [25, 41],
+	iconAnchor: [12, 41],
+	popupAnchor: [1, -34],
+	shadowSize: [41, 41],
+});
 
 function MapClickHandler({ onClick }) {
 	const map = useMapEvents({
@@ -34,6 +48,27 @@ export default function ReportsMap() {
 		category: "",
 		description: "",
 	});
+	const [reports, setReports] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState("");
+
+	// Fetch existing reports from the backend
+	useEffect(() => {
+		const fetchReports = async () => {
+			setLoading(true);
+			try {
+				const response = await axios.get(
+					"http://localhost:3000/reports",
+				);
+				setReports(response.data);
+			} catch (error) {
+				setError("Failed to fetch reports");
+			} finally {
+				setLoading(false);
+			}
+		};
+		fetchReports();
+	}, []);
 
 	const handleMapClick = (lat, lng) => {
 		setIncidentData((prev) => ({
@@ -56,6 +91,34 @@ export default function ReportsMap() {
 			...prev,
 			description: e.target.value,
 		}));
+	};
+
+	const handleSubmit = async () => {
+		setLoading(true);
+		try {
+			// Post new report to the backend
+			await axios.post("http://localhost:3000/reports", {
+				latitude: incidentData.latitude,
+				longitude: incidentData.longitude,
+				category: incidentData.category,
+				description: incidentData.description,
+			});
+			// Clear form data after submission
+			setIncidentData({
+				latitude: "",
+				longitude: "",
+				category: "",
+				description: "",
+			});
+			setDrawerOpen(false);
+			// Fetch updated reports after submitting
+			const response = await axios.get("http://localhost:3000/reports");
+			setReports(response.data);
+		} catch (error) {
+			setError("Failed to submit report");
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -85,14 +148,23 @@ export default function ReportsMap() {
 							attribution='&copy; OpenStreetMap contributors'
 						/>
 						<MapClickHandler onClick={handleMapClick} />
+
+						{/* Display existing reports as markers */}
+						{reports.map((report) => (
+							<Marker
+								key={report.id}
+								position={[report.latitude, report.longitude]}
+								icon={markerIcon}
+							/>
+						))}
 					</MapContainer>
 				</div>
 			</div>
 
 			<Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
 				<SheetContent side='right' className='z-50'>
-					{" "}
 					<h2 className='text-lg font-medium'>Report Incident</h2>
+					{error && <p className='text-red-500'>{error}</p>}
 					<div className='space-y-4 mt-4'>
 						<div>
 							<Label>Location</Label>
@@ -131,7 +203,13 @@ export default function ReportsMap() {
 							/>
 						</div>
 					</div>
-					<Button className='mt-4'>Submit</Button>
+					<Button
+						className='mt-4'
+						onClick={handleSubmit}
+						disabled={loading}
+					>
+						{loading ? "Submitting..." : "Submit"}
+					</Button>
 				</SheetContent>
 			</Sheet>
 		</div>
