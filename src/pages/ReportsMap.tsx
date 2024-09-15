@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import {
+	MapContainer,
+	TileLayer,
+	Marker,
+	Popup,
+	useMapEvents,
+} from "react-leaflet";
 import { Sheet, SheetTrigger, SheetContent } from "../components/ui/sheet";
 import {
 	Select,
@@ -18,17 +24,34 @@ import axios from "axios";
 // Albania coordinates (approximately center)
 const albaniaCenter = [41.3275, 19.8189];
 
-// Custom marker icon (optional)
-const markerIcon = new L.Icon({
-	iconUrl:
-		"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-	shadowUrl:
-		"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-	iconSize: [25, 41],
-	iconAnchor: [12, 41],
-	popupAnchor: [1, -34],
-	shadowSize: [41, 41],
-});
+// Create marker icons for each category
+const markerIcons = {
+	"Air Quality": new L.Icon({
+		iconUrl: "https://cdn-icons-png.flaticon.com/512/2910/2910057.png", // Replace with actual icon URL
+		iconSize: [25, 41],
+		iconAnchor: [12, 41],
+		popupAnchor: [1, -34],
+	}),
+	"Water Pollution": new L.Icon({
+		iconUrl:
+			"https://www.iconpacks.net/icons/4/free-water-pollution-icon-12105-thumb.png", // Replace with actual icon URL
+		iconSize: [25, 41],
+		iconAnchor: [12, 41],
+		popupAnchor: [1, -34],
+	}),
+	"Greenery Issue": new L.Icon({
+		iconUrl: "path/to/greenery-issue-icon.png", // Replace with actual icon URL
+		iconSize: [25, 41],
+		iconAnchor: [12, 41],
+		popupAnchor: [1, -34],
+	}),
+	"Waste Management": new L.Icon({
+		iconUrl: "path/to/waste-management-icon.png", // Replace with actual icon URL
+		iconSize: [25, 41],
+		iconAnchor: [12, 41],
+		popupAnchor: [1, -34],
+	}),
+};
 
 function MapClickHandler({ onClick }) {
 	const map = useMapEvents({
@@ -126,7 +149,7 @@ export default function ReportsMap() {
 			<h1 className='text-2xl font-semibold mb-6'>
 				Incident Reporting Dashboard{" "}
 				<span className='text-sm font-normal'>
-					-<a href='/'>Go Back Home</a>
+					<a href='/'>-Go Back Home</a>
 				</span>
 			</h1>
 			<div className='flex-1 relative'>
@@ -154,8 +177,20 @@ export default function ReportsMap() {
 							<Marker
 								key={report.id}
 								position={[report.latitude, report.longitude]}
-								icon={markerIcon}
-							/>
+								icon={
+									markerIcons[report.category] ||
+									markerIcons["Air Quality"]
+								}
+							>
+								<Popup>
+									<div>
+										<h3>{report.category}</h3>
+										<p>{report.description}</p>
+										<p>Lat: {report.latitude}</p>
+										<p>Lng: {report.longitude}</p>
+									</div>
+								</Popup>
+							</Marker>
 						))}
 					</MapContainer>
 				</div>
